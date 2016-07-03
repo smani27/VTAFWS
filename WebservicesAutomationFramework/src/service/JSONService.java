@@ -15,6 +15,7 @@ import javax.swing.JOptionPane;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -41,20 +42,29 @@ import org.json.XML;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
+import Decoder.BASE64Decoder;
 import controller.DBController;
 
 @Path("/Demo")
 public class JSONService 
 {	
+	
+	// Added authentication to this method to verify the process
 	@GET
 	@Path("/{tableName}")
 	@Produces("application/json")
-	public String getAllEmployeeDetails(@PathParam("tableName") String tableName)
+	public String getAllEmployeeDetails(@PathParam("tableName") String tableName, @HeaderParam("authorization") String authString)
 	{
 		Connection conn=controller.DBController.createDBConnection("msaccess", "jdbc:odbc:Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=C:\\webservicesImplementation\\SampleDB.accdb;", "", "");
 		JSONArray jarray= controller.DBController.executeSelect(conn, "Select * from "+tableName);
 		
-		return jarray.toString(); 
+		if(!isUserAuthenticated(authString)){
+            return "{\"error\":\"User not authenticated\"}";
+        }else {
+        	return jarray.toString(); 
+        }
+		
+		
 	}
 	
 
@@ -352,6 +362,38 @@ public class JSONService
 		
 		return jarray.toString();
 	}
+	
+// Method to validate the entered credentials is matching with the expected credentials	
+private boolean isUserAuthenticated(String authString){
+        
+        
+		String decodedAuth = "";
+      
+        String[] authParts = authString.split("\\s+");
+        String authInfo = authParts[1];
+      
+        byte[] bytes = null;
+        try {
+        	bytes = new BASE64Decoder().decodeBuffer(authInfo);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        decodedAuth = new String(bytes);
+        // decoded given credentials
+        System.out.println(decodedAuth);
+        
+        String [] val=decodedAuth.split(":");
+        if(val[0].equalsIgnoreCase("Admin") && val[1].equalsIgnoreCase("User")){
+        	
+        	System.out.println("VAlid credentials");
+        	return true;
+        	
+        }else
+	        {
+	        	return false;
+	        }
+      }
 
 }
 
